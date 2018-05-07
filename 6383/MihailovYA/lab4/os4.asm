@@ -4,7 +4,7 @@ CODE SEGMENT
 ; ПРОЦЕДУРЫ
 ;---------------------------------------
 ; наш обработчик прерывания 
-INTER PROC FAR
+ROUT PROC FAR
 	; сохраняем используемые регистры:
 	push ax
 	push bp
@@ -40,7 +40,7 @@ INTER PROC FAR
 	KEEP_CS dw 0 ; для хранения его сегмента 
 	COUNT	dw 0 ; для хранения количества вызовов обработчика
 	VIVOD db 'Количество вызовов прерывания:     $'
-INTER ENDP 
+ROUT ENDP 
 ; --------------------------------------
 TETR_TO_HEX PROC near
 	and AL,0Fh
@@ -113,25 +113,25 @@ PRINT PROC
 PRINT ENDP
 ;---------------------------------------
 ; проверка, установлен ли наш обработчик прерывания:
-PROV_INT PROC
+PROV_ROUT PROC
 	mov ah,35h
 	mov al,1ch
 	int 21h ; получили в ES:BX адрес обработчика прерывания
 	mov si,offset SIGNATURA
-	sub si,offset INTER ; в SI - смещение сигнатуры относительно начала обработчика
+	sub si,offset ROUT ; в SI - смещение сигнатуры относительно начала обработчика
 	mov ax,0ABCDh
 	cmp ax,ES:[BX+SI] ; сравниваем сигнатуры
 	je ROUT_EST
-		call SET_INT
+		call SET_ROUT
 		jmp PROV_KONEC
 	ROUT_EST:
-		call DEL_INT
+		call DEL_ROUT
 	PROV_KONEC:
 	ret
-PROV_INT ENDP
+PROV_ROUT ENDP
 ;---------------------------------------
 ; установка нашего обработчика:
-SET_INT PROC
+SET_ROUT PROC
 	mov ax,KEEP_PSP 
 	mov es,ax ; кладём в es PSP нашей програмы
 	cmp byte ptr es:[80h],0
@@ -156,8 +156,8 @@ SET_INT PROC
 	
 	push ds
 	; кладём в ds:dx адрес нашего обработчика:
-	mov dx,offset INTER
-	mov ax,seg INTER
+	mov dx,offset ROUT
+	mov ax,seg ROUT
 	mov ds,ax
 	
 	; меняем адрес обработчика прерывания 1Ch:
@@ -180,10 +180,10 @@ SET_INT PROC
 	xor AL,AL
 	mov AH,4Ch
 	int 21H
-SET_INT ENDP
+SET_ROUT ENDP
 ;---------------------------------------
 ; удаление нашего обработчика:
-DEL_INT PROC
+DEL_ROUT PROC
 	push dx
 	push ax
 	push ds
@@ -208,7 +208,7 @@ DEL_INT PROC
 	mov al,1ch
 	int 21h ; получили в ES:BX адрес нашего обработчика
 	mov si,offset KEEP_IP
-	sub si,offset INTER
+	sub si,offset ROUT
 	
 	; возвращаем стандартный обработчик:
 	mov dx,es:[bx+si]
@@ -242,7 +242,7 @@ DEL_INT PROC
 	pop ax
 	pop dx
 	ret
-DEL_INT ENDP
+DEL_ROUT ENDP
 ;---------------------------------------
 ; сохранение адреса стандартного обработчика в KEEP_IP и KEEP_CS:
 SAVE_STAND PROC
@@ -264,7 +264,7 @@ BEGIN:
 	mov ax,DATA
 	mov ds,ax
 	mov KEEP_PSP, es
-	call PROV_INT
+	call PROV_ROUT
 	xor AL,AL
 	mov AH,4Ch
 	int 21H
@@ -275,7 +275,7 @@ DATA SEGMENT
 	PRER_SET_VIVOD db 'Setup interrupt','$'
 	PRER_DEL_VIVOD db 'Uninstall interrupt',0DH,0AH,'$'
 	PRER_UZHE_SET_VIVOD db 'Interrupt is already set',0DH,0AH,'$'
-	PRER_NE_SET_VIVOD db 'Interrupt not installed',0DH,0AH,'$'
+	PRER_NE_SET_VIVOD db 'Interrupt is not set',0DH,0AH,'$'
 	STRENDL db 0DH,0AH,'$'
 DATA ENDS
 ; СТЕК
